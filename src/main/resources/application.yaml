@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: incident-monitoring
+  
+  datasource:
+    url: jdbc:***REMOVED***ql://localhost:5432/***REMOVED***
+    username: omarfofana
+    password: ***REMOVED***
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
