@@ -83,6 +83,38 @@ public class Application {
         this.createdAt = createdAt;
     }
 
+    public List<Service> getServices() {
+        return services;
+    }
+
+    public void setServices(List<Service> services) {
+        this.services = services;
+    }
+
+    public List<Metric> getMetrics() {
+        return metrics;
+    }
+
+    public void setMetrics(List<Metric> metrics) {
+        this.metrics = metrics;
+    }
+
+    public List<Experiment> getExperiments() {
+        return experiments;
+    }
+
+    public void setExperiments(List<Experiment> experiments) {
+        this.experiments = experiments;
+    }
+
+    public List<Incident> getIncidents() {
+        return incidents;
+    }
+
+    public void setIncidents(List<Incident> incidents) {
+        this.incidents = incidents;
+    }
+
     
 
 }
