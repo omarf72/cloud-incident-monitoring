@@ -14,6 +14,7 @@ public class User {
 
     private Long id;
 
+    @Column(nullable = false,unique = true)
     private String email;
 
     @Column (name = "password_hash",nullable = false)
