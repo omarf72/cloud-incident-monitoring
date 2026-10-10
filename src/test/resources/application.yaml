@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:***REMOVED***ql://localhost:5432/incident_monitoring_test
+    username: omarfofana
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+jwt:
+  secret: test-secret-key-for-jwt-unit-tests-12345

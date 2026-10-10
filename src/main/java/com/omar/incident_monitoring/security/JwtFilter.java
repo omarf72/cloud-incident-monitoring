@@ -2,6 +2,7 @@ package com.omar.incident_monitoring.security;
 
 import com.omar.incident_monitoring.service.JwtService;
 
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,20 +31,29 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
+
         if (header == null || !header.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
-        String token = header.substring(7);
-        Long userId = jwtService.getUserIdFromToken(token);
 
-        UsernamePasswordAuthenticationToken authentication =
-        new UsernamePasswordAuthenticationToken(
-                userId,
-                null,
-                java.util.Collections.emptyList()
-        );
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String token = header.substring(7);
+
+        try {
+            Long userId = jwtService.getUserIdFromToken(token);
+
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userId,
+                    null,
+                    java.util.Collections.emptyList());
+
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+        } catch (JwtException | IllegalArgumentException exception) {
+            SecurityContextHolder.clearContext();
+        }
+
         filterChain.doFilter(request, response);
     }
 

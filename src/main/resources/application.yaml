@@ -7,7 +7,7 @@ spring:
   datasource:
     url: jdbc:***REMOVED***ql://localhost:5432/***REMOVED***
     username: omarfofana
-    password: ***REMOVED***
+    password: ${DB_PASSWORD}
   
   jpa:
     hibernate:
