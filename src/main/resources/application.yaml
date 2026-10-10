@@ -5,7 +5,7 @@ spring:
     name: incident-monitoring
   
   datasource:
-    url: jdbc:***REMOVED***ql://localhost:5432/***REMOVED***
+    url: jdbc:postgresql://localhost:5432/postgres
     username: omarfofana
     password: ${DB_PASSWORD}
   
