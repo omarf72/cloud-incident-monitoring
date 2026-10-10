@@ -1,8 +1,9 @@
 spring:
   datasource:
-    url: jdbc:***REMOVED***ql://localhost:5432/incident_monitoring_test
+    url: jdbc:postgresql://localhost:5432/incident_monitoring_test
     username: omarfofana
     password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
