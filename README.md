@@ -1,0 +1,1 @@
+![Backend CI](https://github.com/omarf72/cloud-incident-monitoring/actions/workflows/ci.yml/badge.svg?branch=main) 
