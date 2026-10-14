@@ -251,42 +251,112 @@ class ApplicationControllerIntegrationTest {
     }
 
     @Test
-void userCanUpdateServiceUnderTheirApplication() throws Exception {
-    // Create the owner.
-    User owner = new User();
-    owner.setEmail("update-service-test@example.com");
-    owner.setPasswordHash("password");
-    owner = userRepository.saveAndFlush(owner);
+    void userCanUpdateServiceUnderTheirApplication() throws Exception {
+        // Create the owner.
+        User owner = new User();
+        owner.setEmail("update-service-test@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
 
-    // Create the application.
-    Application application = new Application();
-    application.setName("Update Test Application");
-    application.setUser(owner);
-    application = applicationRepository.saveAndFlush(application);
+        // Create the application.
+        Application application = new Application();
+        application.setName("Update Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
 
-    // Create the service to update.
-    Service service = new Service();
-    service.setName("Payment API");
-    service.setType("API");
-    service.setApplication(application);
-    service = serviceRepository.saveAndFlush(service);
+        // Create the service to update.
+        Service service = new Service();
+        service.setName("Payment API");
+        service.setType("API");
+        service.setApplication(application);
+        service = serviceRepository.saveAndFlush(service);
 
-    String token = jwtService.generateToken(owner);
+        String token = jwtService.generateToken(owner);
 
-    // Update the service.
-    mockMvc.perform(put("/api/applications/" + application.getId()
-            + "/services/" + service.getId())
-            .header("Authorization", "Bearer " + token)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("""
-                    {
-                        "name": "Payments API",
-                        "type": "API"
-                    }
-                    """))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.name").value("Payments API"))
-            .andExpect(jsonPath("$.type").value("API"));
-}
+        // Update the service.
+        mockMvc.perform(put("/api/applications/" + application.getId()
+                + "/services/" + service.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Payments API",
+                            "type": "API"
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Payments API"))
+                .andExpect(jsonPath("$.type").value("API"));
+    }
+
+    @Test
+    void anotherUserCannotUpdateServiceUnderOtherOwnership() throws Exception {
+        // Create the owner.
+        User owner = new User();
+        owner.setEmail("update-service@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        User user = new User();
+        user.setEmail("non-owner@example.com");
+        user.setPasswordHash("password");
+        user = userRepository.saveAndFlush(user);
+
+        // Create the application.
+        Application application = new Application();
+        application.setName("Update Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+        // Create the service to update.
+        Service service = new Service();
+        service.setName("Payment API");
+        service.setType("API");
+        service.setApplication(application);
+        service = serviceRepository.saveAndFlush(service);
+
+        String token = jwtService.generateToken(user);
+
+        // Update the service.
+        mockMvc.perform(put("/api/applications/" + application.getId()
+                + "/services/" + service.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Payments API",
+                            "type": "API"
+                        }
+                        """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void userCannotUpdateNonexistentService() throws Exception {
+        User owner = new User();
+        owner.setEmail("none-service@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        Application application = new Application();
+        application.setName("Update Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+        String token = jwtService.generateToken(owner);
+
+        mockMvc.perform(put("/api/applications/" + application.getId()
+                + "/services/999999")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Payments API",
+                            "type": "API"
+                        }
+                        """))
+                .andExpect(status().isNotFound());
+
+    }
 
 }
