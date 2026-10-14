@@ -359,4 +359,78 @@ class ApplicationControllerIntegrationTest {
 
     }
 
+    @Test
+    void createBlankNameAndTypeService() throws Exception {
+        User owner = new User();
+        owner.setEmail("none-service@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+    }
+
+    @Test
+    void userCannotUpdateServiceWithBlankName() throws Exception {
+        User owner = new User();
+        owner.setEmail("blank-name-update@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        Application application = new Application();
+        application.setName("Validation Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+        Service service = new Service();
+        service.setName("Payment API");
+        service.setType("API");
+        service.setApplication(application);
+        service = serviceRepository.saveAndFlush(service);
+
+        String token = jwtService.generateToken(owner);
+
+        mockMvc.perform(put("/api/applications/" + application.getId()
+                + "/services/" + service.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "   ",
+                            "type": "API"
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+     @Test
+    void userCannotUpdateServiceWithBlankType() throws Exception {
+        User owner = new User();
+        owner.setEmail("blank-name-update@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        Application application = new Application();
+        application.setName("Validation Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+        Service service = new Service();
+        service.setName("Payment API");
+        service.setType("API");
+        service.setApplication(application);
+        service = serviceRepository.saveAndFlush(service);
+
+        String token = jwtService.generateToken(owner);
+
+        mockMvc.perform(put("/api/applications/" + application.getId()
+                + "/services/" + service.getId())
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                            "name": "Paymet API",
+                            "type": " "
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
 }
