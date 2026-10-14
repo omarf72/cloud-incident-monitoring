@@ -9,6 +9,7 @@ import com.omar.incident_monitoring.repository.ServiceRepository;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
@@ -109,6 +110,23 @@ public class MonitoredServiceManager {
         Service updatedService = serviceRepository.save(service);
 
         return convertToResponse(updatedService);
+    }
+
+    @Transactional 
+    public void deleteService(Long applicationId,Long serviceId){
+
+        Long userId = getAuthenticatedUserId();
+
+         // Verify the authenticated user owns the application.
+        applicationRepository.findByIdAndUserId(applicationId, userId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        // Verify the service belongs to this application.
+        Service service = serviceRepository
+                .findByIdAndApplicationId(serviceId, applicationId)
+                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
+        
+        serviceRepository.delete(service);
     }
 
 }

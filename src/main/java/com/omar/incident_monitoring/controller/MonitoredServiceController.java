@@ -9,7 +9,9 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 
 @RestController
 @RequestMapping("/api/applications/{applicationId}/services")
@@ -42,6 +44,14 @@ public class MonitoredServiceController {
         @Valid @RequestBody ServiceCreateRequest request
     ){
         return monitoredServiceManager.updateService(applicationId, serviceId, request);
+    }
+
+    @DeleteMapping("/{serviceId}")
+    public ResponseEntity<Void>  deleteSerivce(@PathVariable Long applicationId,
+        @PathVariable Long serviceId
+    ){
+        monitoredServiceManager.deleteService(applicationId, serviceId);
+        return ResponseEntity.noContent().build();
     }
 
     

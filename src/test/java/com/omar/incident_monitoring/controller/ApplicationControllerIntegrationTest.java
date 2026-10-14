@@ -18,7 +18,7 @@ import org.springframework.http.MediaType;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -360,14 +360,6 @@ class ApplicationControllerIntegrationTest {
     }
 
     @Test
-    void createBlankNameAndTypeService() throws Exception {
-        User owner = new User();
-        owner.setEmail("none-service@example.com");
-        owner.setPasswordHash("password");
-        owner = userRepository.saveAndFlush(owner);
-    }
-
-    @Test
     void userCannotUpdateServiceWithBlankName() throws Exception {
         User owner = new User();
         owner.setEmail("blank-name-update@example.com");
@@ -403,7 +395,7 @@ class ApplicationControllerIntegrationTest {
      @Test
     void userCannotUpdateServiceWithBlankType() throws Exception {
         User owner = new User();
-        owner.setEmail("blank-name-update@example.com");
+        owner.setEmail("user-cant-update-blank-type@example.com");
         owner.setPasswordHash("password");
         owner = userRepository.saveAndFlush(owner);
 
@@ -432,5 +424,90 @@ class ApplicationControllerIntegrationTest {
                         """))
                 .andExpect(status().isBadRequest());
     }
+
+
+    @Test
+    void ownerDeleteService() throws Exception{
+        User owner = new User();
+        owner.setEmail("delete-service@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        Application application = new Application();
+        application.setName("Validation Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+        Service service = new Service();
+        service.setName("Payment API");
+        service.setType("API");
+        service.setApplication(application);
+        service = serviceRepository.saveAndFlush(service);
+
+        String token = jwtService.generateToken(owner);
+
+
+        mockMvc.perform(delete("/api/applications/" + application.getId()
+                + "/services/" + service.getId())
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void userCannotDeleteAnotherOwnerService() throws Exception{
+        User owner = new User();
+        owner.setEmail("usercantdelete-another-service@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        User user = new User();
+        user.setEmail("other-user@example.com");
+        user.setPasswordHash("password");
+        user = userRepository.saveAndFlush(user);
+
+        Application application = new Application();
+        application.setName("Authorization Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+        Service service = new Service();
+        service.setName("Payment API");
+        service.setType("API");
+        service.setApplication(application);
+        service = serviceRepository.saveAndFlush(service);
+
+
+        String token = jwtService.generateToken(user);
+
+
+        mockMvc.perform(delete("/api/applications/" + application.getId()
+                + "/services/" + service.getId())
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+     @Test
+    void ownerDeleteNonexistentService() throws Exception{
+        User owner = new User();
+        owner.setEmail("delet-none-existent-service@example.com");
+        owner.setPasswordHash("password");
+        owner = userRepository.saveAndFlush(owner);
+
+        Application application = new Application();
+        application.setName("Validation Test Application");
+        application.setUser(owner);
+        application = applicationRepository.saveAndFlush(application);
+
+
+        String token = jwtService.generateToken(owner);
+
+
+        mockMvc.perform(delete("/api/applications/" + application.getId()
+                + "/services/9999")
+                .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNotFound());
+    }
+
+
 
 }
