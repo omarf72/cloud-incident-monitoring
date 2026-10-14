@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import com.omar.incident_monitoring.dto.MonitoredServiceResponse;
+import com.omar.incident_monitoring.exception.ServiceNotFoundException;
 
 @org.springframework.stereotype.Service
 public class MonitoredServiceManager {
@@ -83,4 +84,31 @@ public class MonitoredServiceManager {
 
         return response;
     }
+
+    @Transactional
+    public MonitoredServiceResponse updateService(
+            Long applicationId,
+            Long serviceId,
+            ServiceCreateRequest request) {
+
+        Long userId = getAuthenticatedUserId();
+
+        // Verify the authenticated user owns the application.
+        applicationRepository.findByIdAndUserId(applicationId, userId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        // Verify the service belongs to this application.
+        Service service = serviceRepository
+                .findByIdAndApplicationId(serviceId, applicationId)
+                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
+
+        // Apply the requested changes.
+        service.setName(request.getName().trim());
+        service.setType(request.getType().trim().toUpperCase());
+
+        Service updatedService = serviceRepository.save(service);
+
+        return convertToResponse(updatedService);
+    }
+
 }

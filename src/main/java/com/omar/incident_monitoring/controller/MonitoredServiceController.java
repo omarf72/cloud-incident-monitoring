@@ -35,5 +35,14 @@ public class MonitoredServiceController {
         return monitoredServiceManager.getServicesForApplication(applicationId);
     }
 
+    @PutMapping("/{serviceId}")
+    public MonitoredServiceResponse updateServices(
+        @PathVariable  Long applicationId,
+        @PathVariable Long serviceId,
+        @Valid @RequestBody ServiceCreateRequest request
+    ){
+        return monitoredServiceManager.updateService(applicationId, serviceId, request);
+    }
+
     
 }

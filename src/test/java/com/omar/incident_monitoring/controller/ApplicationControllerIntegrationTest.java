@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -248,5 +249,44 @@ class ApplicationControllerIntegrationTest {
                 .andExpect(jsonPath("$", hasSize(0)));
 
     }
+
+    @Test
+void userCanUpdateServiceUnderTheirApplication() throws Exception {
+    // Create the owner.
+    User owner = new User();
+    owner.setEmail("update-service-test@example.com");
+    owner.setPasswordHash("password");
+    owner = userRepository.saveAndFlush(owner);
+
+    // Create the application.
+    Application application = new Application();
+    application.setName("Update Test Application");
+    application.setUser(owner);
+    application = applicationRepository.saveAndFlush(application);
+
+    // Create the service to update.
+    Service service = new Service();
+    service.setName("Payment API");
+    service.setType("API");
+    service.setApplication(application);
+    service = serviceRepository.saveAndFlush(service);
+
+    String token = jwtService.generateToken(owner);
+
+    // Update the service.
+    mockMvc.perform(put("/api/applications/" + application.getId()
+            + "/services/" + service.getId())
+            .header("Authorization", "Bearer " + token)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                    {
+                        "name": "Payments API",
+                        "type": "API"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Payments API"))
+            .andExpect(jsonPath("$.type").value("API"));
+}
 
 }
