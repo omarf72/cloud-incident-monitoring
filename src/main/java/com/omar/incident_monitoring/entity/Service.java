@@ -3,6 +3,8 @@ package com.omar.incident_monitoring.entity;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 
 @Entity 
 @Table (name="services")
@@ -14,7 +16,8 @@ public class Service {
     private Long id;
 
     @ManyToOne
-    @JoinColumn (name="application_id",nullable = false) 
+    @JoinColumn (name="application_id",nullable = false)
+    @JsonIgnore
     private Application application;
 
     private String name;
