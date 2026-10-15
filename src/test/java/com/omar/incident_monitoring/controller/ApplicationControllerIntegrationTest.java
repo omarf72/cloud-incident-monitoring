@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
@@ -451,6 +452,8 @@ class ApplicationControllerIntegrationTest {
                 + "/services/" + service.getId())
                 .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
+        
+        assertFalse(serviceRepository.existsById(service.getId()));
     }
 
     @Test
