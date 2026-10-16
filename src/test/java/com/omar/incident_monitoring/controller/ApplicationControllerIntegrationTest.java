@@ -28,13 +28,16 @@ import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -778,6 +781,196 @@ class ApplicationControllerIntegrationTest {
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$").isArray())
                                 .andExpect(jsonPath("$.length()").value(0));
+        }
+
+        @Test
+        void userCanResolveIncidentAndSetEndedAt() throws Exception {
+                User owner = new User();
+                owner.setEmail("resolveincident@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Resolve Incident Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident incident = new Incident();
+                incident.setName("Elevated API latency");
+                incident.setSeverity(Incident.IncidentSeverity.HIGH);
+                incident.setStatus(Incident.IncidentStatus.OPEN);
+                incident.setReason("Response times exceeded the configured threshold");
+                incident.setApplication(application);
+                incident.setStartedAt(LocalDateTime.now());
+                incident.setCreatedAt(LocalDateTime.now());
+                incident = incidentRepository.saveAndFlush(incident);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(patch(
+                                "/api/applications/" + application.getId()
+                                                + "/incidents/" + incident.getId())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "status": "RESOLVED"
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.status").value("RESOLVED"))
+                                .andExpect(jsonPath("$.endedAt").isNotEmpty());
+
+                Incident updatedIncident = incidentRepository.findById(incident.getId())
+                                .orElseThrow();
+
+                assertEquals(Incident.IncidentStatus.RESOLVED, updatedIncident.getStatus());
+                assertNotNull(updatedIncident.getEndedAt());
+        }
+
+        @Test
+        void userCannotReopenResolvedIncident() throws Exception {
+                User owner = new User();
+                owner.setEmail("reopenincident@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Resolved Incident Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident incident = new Incident();
+                incident.setName("Resolved database outage");
+                incident.setSeverity(Incident.IncidentSeverity.CRITICAL);
+                incident.setStatus(Incident.IncidentStatus.RESOLVED);
+                incident.setReason("Database outage was fixed");
+                incident.setApplication(application);
+                incident.setStartedAt(LocalDateTime.now().minusHours(1));
+                incident.setCreatedAt(LocalDateTime.now().minusHours(1));
+                incident.setEndedAt(LocalDateTime.now().minusMinutes(10));
+                incident = incidentRepository.saveAndFlush(incident);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(patch(
+                                "/api/applications/" + application.getId()
+                                                + "/incidents/" + incident.getId())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "status": "OPEN"
+                                                }
+                                                """))
+                                .andExpect(status().isBadRequest());
+
+                Incident unchangedIncident = incidentRepository.findById(incident.getId())
+                                .orElseThrow();
+
+                assertEquals(Incident.IncidentStatus.RESOLVED, unchangedIncident.getStatus());
+                assertNotNull(unchangedIncident.getEndedAt());
+        }
+
+        @Test
+        void userCanPartiallyUpdateIncident() throws Exception {
+                User owner = new User();
+                owner.setEmail("partialupdate@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Partial Update Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident incident = new Incident();
+                incident.setName("Original incident name");
+                incident.setSeverity(Incident.IncidentSeverity.LOW);
+                incident.setStatus(Incident.IncidentStatus.OPEN);
+                incident.setReason("Original reason");
+                incident.setApplication(application);
+                incident.setStartedAt(LocalDateTime.now().minusMinutes(30));
+                incident.setCreatedAt(LocalDateTime.now().minusMinutes(30));
+                incident = incidentRepository.saveAndFlush(incident);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(patch(
+                                "/api/applications/" + application.getId()
+                                                + "/incidents/" + incident.getId())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "severity": "CRITICAL",
+                                                    "reason": "Database connection failures"
+                                                }
+                                                """))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.name").value("Original incident name"))
+                                .andExpect(jsonPath("$.severity").value("CRITICAL"))
+                                .andExpect(jsonPath("$.status").value("OPEN"))
+                                .andExpect(jsonPath("$.reason")
+                                                .value("Database connection failures"));
+
+                Incident updatedIncident = incidentRepository.findById(incident.getId())
+                                .orElseThrow();
+
+                assertEquals("Original incident name", updatedIncident.getName());
+                assertEquals(Incident.IncidentSeverity.CRITICAL,
+                                updatedIncident.getSeverity());
+                assertEquals(Incident.IncidentStatus.OPEN, updatedIncident.getStatus());
+                assertEquals("Database connection failures", updatedIncident.getReason());
+        }
+
+        @Test
+        void anotherUserCannotUpdateSomeoneElsesIncident() throws Exception {
+                User owner = new User();
+                owner.setEmail("incidentowner@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                User anotherUser = new User();
+                anotherUser.setEmail("otherincidentuser@example.com");
+                anotherUser.setPasswordHash("password");
+                anotherUser = userRepository.saveAndFlush(anotherUser);
+
+                Application application = new Application();
+                application.setName("Owned Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident incident = new Incident();
+                incident.setName("Unauthorized Update Test");
+                incident.setSeverity(Incident.IncidentSeverity.HIGH);
+                incident.setStatus(Incident.IncidentStatus.OPEN);
+                incident.setReason("Original reason");
+                incident.setApplication(application);
+                incident.setStartedAt(LocalDateTime.now().minusMinutes(30));
+                incident.setCreatedAt(LocalDateTime.now().minusMinutes(30));
+                incident = incidentRepository.saveAndFlush(incident);
+
+                String token = jwtService.generateToken(anotherUser);
+
+                mockMvc.perform(patch(
+                                "/api/applications/" + application.getId()
+                                                + "/incidents/" + incident.getId())
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "status": "RESOLVED"
+                                                }
+                                                """))
+                                .andExpect(status().isNotFound());
+
+                Incident unchangedIncident = incidentRepository.findById(incident.getId())
+                                .orElseThrow();
+
+                assertEquals(Incident.IncidentStatus.OPEN, unchangedIncident.getStatus());
+                assertEquals("Original reason", unchangedIncident.getReason());
+                org.junit.jupiter.api.Assertions.assertNull(unchangedIncident.getEndedAt());
         }
 
 }

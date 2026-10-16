@@ -14,62 +14,98 @@ import com.omar.incident_monitoring.exception.InvalidCredentialsException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ApplicationNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleApplicationNotFound(
-            ApplicationNotFoundException exception, HttpServletRequest request) {
+        @ExceptionHandler(ApplicationNotFoundException.class)
+        public ResponseEntity<ErrorResponse> handleApplicationNotFound(
+                        ApplicationNotFoundException exception, HttpServletRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse();
+                ErrorResponse errorResponse = new ErrorResponse();
 
-        errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
-        errorResponse.setError("Not Found");
-        errorResponse.setMessage(exception.getMessage());
-        errorResponse.setTimestamp(LocalDateTime.now());
-        errorResponse.setPath(request.getRequestURI());
+                errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
+                errorResponse.setError("Not Found");
+                errorResponse.setMessage(exception.getMessage());
+                errorResponse.setTimestamp(LocalDateTime.now());
+                errorResponse.setPath(request.getRequestURI());
 
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(errorResponse);
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(errorResponse);
 
-    }
+        }
 
-    @ExceptionHandler(EmailAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> emailAlreadyExists(
-            EmailAlreadyExistsException exception, HttpServletRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse();
+        @ExceptionHandler(EmailAlreadyExistsException.class)
+        public ResponseEntity<ErrorResponse> emailAlreadyExists(
+                        EmailAlreadyExistsException exception, HttpServletRequest request) {
+                ErrorResponse errorResponse = new ErrorResponse();
 
-        errorResponse.setStatus(HttpStatus.CONFLICT.value());
-        errorResponse.setError("Conflict");
-        errorResponse.setMessage(exception.getMessage());
-        errorResponse.setTimestamp(LocalDateTime.now());
-        errorResponse.setPath(request.getRequestURI());
+                errorResponse.setStatus(HttpStatus.CONFLICT.value());
+                errorResponse.setError("Conflict");
+                errorResponse.setMessage(exception.getMessage());
+                errorResponse.setTimestamp(LocalDateTime.now());
+                errorResponse.setPath(request.getRequestURI());
 
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(errorResponse);
-    }
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(errorResponse);
+        }
 
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<ErrorResponse> invalidCredentials(
-            InvalidCredentialsException exception, HttpServletRequest request) {
+        @ExceptionHandler(InvalidCredentialsException.class)
+        public ResponseEntity<ErrorResponse> invalidCredentials(
+                        InvalidCredentialsException exception, HttpServletRequest request) {
 
-        ErrorResponse errorResponse = new ErrorResponse();
+                ErrorResponse errorResponse = new ErrorResponse();
 
-        errorResponse.setStatus((HttpStatus.UNAUTHORIZED.value()));
-        errorResponse.setError("Unauthorized");
-        errorResponse.setMessage(exception.getMessage());
-        errorResponse.setTimestamp(LocalDateTime.now());
-        errorResponse.setPath(request.getRequestURI());
+                errorResponse.setStatus((HttpStatus.UNAUTHORIZED.value()));
+                errorResponse.setError("Unauthorized");
+                errorResponse.setMessage(exception.getMessage());
+                errorResponse.setTimestamp(LocalDateTime.now());
+                errorResponse.setPath(request.getRequestURI());
 
-        return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(errorResponse);
+                return ResponseEntity
+                                .status(HttpStatus.UNAUTHORIZED)
+                                .body(errorResponse);
 
-    }
+        }
 
-    @ExceptionHandler(ServiceNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public void handleServiceNotFound(
-            ServiceNotFoundException exception) {
-    }
+        @ExceptionHandler(ServiceNotFoundException.class)
+        @ResponseStatus(HttpStatus.NOT_FOUND)
+        public void handleServiceNotFound(
+                        ServiceNotFoundException exception) {
+        }
+
+        @ExceptionHandler(IncidentNotFound.class)
+        public ResponseEntity<ErrorResponse> handleIncidentNotFound(
+                        IncidentNotFound exception,
+                        HttpServletRequest request) {
+
+                ErrorResponse errorResponse = new ErrorResponse();
+
+                errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
+                errorResponse.setError("Not Found");
+                errorResponse.setMessage(exception.getMessage());
+                errorResponse.setTimestamp(LocalDateTime.now());
+                errorResponse.setPath(request.getRequestURI());
+
+                return ResponseEntity
+                                .status(HttpStatus.NOT_FOUND)
+                                .body(errorResponse);
+        }
+
+        @ExceptionHandler(InvalidIncidentUpdateException.class)
+        public ResponseEntity<ErrorResponse> handleInvalidIncidentUpdate(
+                        InvalidIncidentUpdateException exception,
+                        HttpServletRequest request) {
+
+                ErrorResponse errorResponse = new ErrorResponse();
+
+                errorResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+                errorResponse.setError("Bad Request");
+                errorResponse.setMessage(exception.getMessage());
+                errorResponse.setTimestamp(LocalDateTime.now());
+                errorResponse.setPath(request.getRequestURI());
+
+                return ResponseEntity
+                                .status(HttpStatus.BAD_REQUEST)
+                                .body(errorResponse);
+        }
 
 }

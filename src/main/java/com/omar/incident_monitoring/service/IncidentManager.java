@@ -8,12 +8,15 @@ import org.springframework.stereotype.Service;
 
 import com.omar.incident_monitoring.dto.IncidentCreateRequest;
 import com.omar.incident_monitoring.dto.IncidentResponse;
+import com.omar.incident_monitoring.dto.IncidentUpdateRequest;
 import com.omar.incident_monitoring.entity.Application;
 import com.omar.incident_monitoring.entity.Incident;
 import com.omar.incident_monitoring.repository.ApplicationRepository;
 import com.omar.incident_monitoring.repository.IncidentRepository;
 import com.omar.incident_monitoring.entity.Incident.IncidentStatus;
 import com.omar.incident_monitoring.exception.ApplicationNotFoundException;
+import com.omar.incident_monitoring.exception.IncidentNotFound;
+import com.omar.incident_monitoring.exception.InvalidIncidentUpdateException;
 
 @Service
 public class IncidentManager {
@@ -80,6 +83,73 @@ public class IncidentManager {
                 .map(this::convertToResponse)
                 .toList();
 
+    }
+
+    public IncidentResponse updateIncident(
+            Long incidentId,
+            Long applicationId,
+            IncidentUpdateRequest request) {
+
+        Long userId = getAuthenticatedUserId();
+
+        // Verify the authenticated user owns the application.
+        applicationRepository.findByIdAndUserId(applicationId, userId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        // Verify the incident belongs to this application.
+        Incident incident = incidentRepository
+                .findByIdAndApplicationId(incidentId, applicationId)
+                .orElseThrow(() -> new IncidentNotFound(incidentId));
+
+        // Update name only if provided.
+        if (request.getName() != null) {
+            if (request.getName().isBlank()) {
+                throw new InvalidIncidentUpdateException(
+                        "Incident name cannot be blank");
+            }
+            if (request.getName().length() > 100) {
+                throw new InvalidIncidentUpdateException(
+                        "Incident name must be 100 characters or fewer");
+            }
+
+            incident.setName(request.getName());
+        }
+
+        // Update severity only if provided.
+        if (request.getSeverity() != null) {
+            incident.setSeverity(request.getSeverity());
+        }
+
+        // Update reason only if provided.
+        if (request.getReason() != null) {
+            if (request.getReason().length() > 1000) {
+                throw new InvalidIncidentUpdateException(
+                        "Incident reason must be 1000 characters or fewer");
+            }
+
+            incident.setReason(request.getReason());
+        }
+
+        // Update status only if provided.
+        if (request.getStatus() != null) {
+            if (incident.getStatus() == IncidentStatus.RESOLVED
+                    && request.getStatus() != IncidentStatus.RESOLVED) {
+                throw new InvalidIncidentUpdateException(
+                        "A resolved incident cannot be reopened");
+            }
+
+            // Record the resolution time only on the first transition.
+            if (incident.getStatus() != IncidentStatus.RESOLVED
+                    && request.getStatus() == IncidentStatus.RESOLVED) {
+                incident.setEndedAt(LocalDateTime.now());
+            }
+
+            incident.setStatus(request.getStatus());
+        }
+
+        Incident savedIncident = incidentRepository.save(incident);
+
+        return convertToResponse(savedIncident);
     }
 
     private IncidentResponse convertToResponse(Incident incident) {
