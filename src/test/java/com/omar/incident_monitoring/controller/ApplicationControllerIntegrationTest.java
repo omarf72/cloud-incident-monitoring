@@ -23,6 +23,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDateTime;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -681,6 +684,100 @@ class ApplicationControllerIntegrationTest {
 
                 assertTrue(
                                 incidentRepository.findAllByApplicationId(application.getId()).isEmpty());
+        }
+
+        @Test
+        void userCanListIncidentsUnderTheirApplication() throws Exception {
+                User owner = new User();
+                owner.setEmail("listincidents@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("List Incidents Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident incident = new Incident();
+                incident.setName("Elevated API latency");
+                incident.setSeverity(Incident.IncidentSeverity.HIGH);
+                incident.setStatus(Incident.IncidentStatus.OPEN);
+                incident.setReason("Response times exceeded the configured threshold");
+                incident.setApplication(application);
+
+                LocalDateTime now = LocalDateTime.now();
+                incident.setCreatedAt(now);
+                incident.setStartedAt(now);
+                incident = incidentRepository.saveAndFlush(incident);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId() + "/incidents")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isArray())
+                                .andExpect(jsonPath("$.length()").value(1))
+                                .andExpect(jsonPath("$[0].id").value(incident.getId()))
+                                .andExpect(jsonPath("$[0].name").value("Elevated API latency"))
+                                .andExpect(jsonPath("$[0].severity").value("HIGH"))
+                                .andExpect(jsonPath("$[0].status").value("OPEN"))
+                                .andExpect(jsonPath("$[0].applicationId").value(application.getId()))
+                                .andExpect(jsonPath("$[0].reason").value(
+                                                "Response times exceeded the configured threshold"));
+        }
+
+        @Test
+        void anotherUserCannotListIncidentsUnderSomeoneElsesApplication() throws Exception {
+                User owner = new User();
+                owner.setEmail("incidentlistowner@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Private Incidents Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident incident = new Incident();
+                incident.setName("Private incident");
+                incident.setSeverity(Incident.IncidentSeverity.HIGH);
+                incident.setStatus(Incident.IncidentStatus.OPEN);
+                incident.setApplication(application);
+                incident.setCreatedAt(LocalDateTime.now());
+                incident.setStartedAt(LocalDateTime.now());
+                incidentRepository.saveAndFlush(incident);
+
+                User other = new User();
+                other.setEmail("differentincidentuser@example.com");
+                other.setPasswordHash("password");
+                other = userRepository.saveAndFlush(other);
+
+                String token = jwtService.generateToken(other);
+
+                mockMvc.perform(get("/api/applications/" + application.getId() + "/incidents")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void userCanListIncidentsWhenApplicationHasNone() throws Exception {
+                User owner = new User();
+                owner.setEmail("noincidents@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Application Without Incidents");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId() + "/incidents")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$").isArray())
+                                .andExpect(jsonPath("$.length()").value(0));
         }
 
 }

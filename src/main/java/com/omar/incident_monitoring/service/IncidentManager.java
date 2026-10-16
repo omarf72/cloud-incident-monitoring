@@ -1,6 +1,7 @@
 package com.omar.incident_monitoring.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -41,31 +42,45 @@ public class IncidentManager {
     }
 
     public IncidentResponse createIncident(
-        Long applicationId,
-        IncidentCreateRequest request) {
+            Long applicationId,
+            IncidentCreateRequest request) {
 
-    Long userId = getAuthenticatedUserId();
+        Long userId = getAuthenticatedUserId();
 
-    Application ownApplication = applicationRepository
-            .findByIdAndUserId(applicationId, userId)
-            .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+        Application ownApplication = applicationRepository
+                .findByIdAndUserId(applicationId, userId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
-    Incident incident = new Incident();
+        Incident incident = new Incident();
 
-    incident.setName(request.getName());
-    incident.setSeverity(request.getSeverity());
-    incident.setStatus(IncidentStatus.OPEN);
-    incident.setReason(request.getReason());
-    incident.setApplication(ownApplication);
+        incident.setName(request.getName());
+        incident.setSeverity(request.getSeverity());
+        incident.setStatus(IncidentStatus.OPEN);
+        incident.setReason(request.getReason());
+        incident.setApplication(ownApplication);
 
-    LocalDateTime now = LocalDateTime.now();
-    incident.setCreatedAt(now);
-    incident.setStartedAt(now);
+        LocalDateTime now = LocalDateTime.now();
+        incident.setCreatedAt(now);
+        incident.setStartedAt(now);
 
-    Incident savedIncident = incidentRepository.save(incident);
+        Incident savedIncident = incidentRepository.save(incident);
 
-    return convertToResponse(savedIncident);
-}
+        return convertToResponse(savedIncident);
+    }
+
+    public List<IncidentResponse> getIncidents(Long applicationId) {
+        Long userId = getAuthenticatedUserId();
+
+        Application ownApplication = applicationRepository
+                .findByIdAndUserId(applicationId, userId)
+                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+        return incidentRepository.findAllByApplicationId(ownApplication.getId())
+                .stream()
+                .map(this::convertToResponse)
+                .toList();
+
+    }
 
     private IncidentResponse convertToResponse(Incident incident) {
         IncidentResponse response = new IncidentResponse();
