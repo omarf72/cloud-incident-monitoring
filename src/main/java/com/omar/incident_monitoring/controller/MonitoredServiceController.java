@@ -1,5 +1,6 @@
 package com.omar.incident_monitoring.controller;
 
+import com.omar.incident_monitoring.dto.IncidentResponse;
 import com.omar.incident_monitoring.dto.MonitoredServiceResponse;
 import com.omar.incident_monitoring.dto.ServiceCreateRequest;
 import com.omar.incident_monitoring.entity.Service;
@@ -39,20 +40,24 @@ public class MonitoredServiceController {
 
     @PutMapping("/{serviceId}")
     public MonitoredServiceResponse updateServices(
-        @PathVariable  Long applicationId,
-        @PathVariable Long serviceId,
-        @Valid @RequestBody ServiceCreateRequest request
-    ){
+            @PathVariable Long applicationId,
+            @PathVariable Long serviceId,
+            @Valid @RequestBody ServiceCreateRequest request) {
         return monitoredServiceManager.updateService(applicationId, serviceId, request);
     }
 
     @DeleteMapping("/{serviceId}")
-    public ResponseEntity<Void>  deleteSerivce(@PathVariable Long applicationId,
-        @PathVariable Long serviceId
-    ){
+    public ResponseEntity<Void> deleteSerivce(@PathVariable Long applicationId,
+            @PathVariable Long serviceId) {
         monitoredServiceManager.deleteService(applicationId, serviceId);
         return ResponseEntity.noContent().build();
     }
 
-    
+    @GetMapping("/{serviceId}/incidents")
+    public List<IncidentResponse> getServiceIncidents(
+            @PathVariable Long applicationId,
+            @PathVariable Long serviceId) {
+        return monitoredServiceManager.getIncidentsForService(applicationId, serviceId);
+    }
+
 }

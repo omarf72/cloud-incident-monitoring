@@ -1019,7 +1019,104 @@ class ApplicationControllerIntegrationTest {
                                 .andExpect(status().isNotFound());
 
                 assertTrue(
-        incidentRepository.findAllByApplicationId(ownApplication.getId()).isEmpty());
+                                incidentRepository.findAllByApplicationId(ownApplication.getId()).isEmpty());
+        }
+
+        @Test
+        void userCanFilterIncidentsByService() throws Exception {
+                User owner = new User();
+                owner.setEmail("filter-owner@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Filtering Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Service paymentService = new Service();
+                paymentService.setName("Payment");
+                paymentService.setType("API");
+                paymentService.setApplication(application);
+                paymentService = serviceRepository.saveAndFlush(paymentService);
+
+                Service databaseService = new Service();
+                databaseService.setName("Database");
+                databaseService.setType("DATABASE");
+                databaseService.setApplication(application);
+                databaseService = serviceRepository.saveAndFlush(databaseService);
+
+                Incident firstIncident = new Incident();
+                firstIncident.setName("Payment latency");
+                firstIncident.setSeverity(Incident.IncidentSeverity.HIGH);
+                firstIncident.setStatus(Incident.IncidentStatus.OPEN);
+                firstIncident.setApplication(application);
+                firstIncident.setService(paymentService);
+                incidentRepository.saveAndFlush(firstIncident);
+
+                Incident secondIncident = new Incident();
+                secondIncident.setName("Payment errors");
+                secondIncident.setSeverity(Incident.IncidentSeverity.MEDIUM);
+                secondIncident.setStatus(Incident.IncidentStatus.OPEN);
+                secondIncident.setApplication(application);
+                secondIncident.setService(paymentService);
+                incidentRepository.saveAndFlush(secondIncident);
+
+                Incident unrelatedIncident = new Incident();
+                unrelatedIncident.setName("Database outage");
+                unrelatedIncident.setSeverity(Incident.IncidentSeverity.CRITICAL);
+                unrelatedIncident.setStatus(Incident.IncidentStatus.OPEN);
+                unrelatedIncident.setApplication(application);
+                unrelatedIncident.setService(databaseService);
+                incidentRepository.saveAndFlush(unrelatedIncident);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId()
+                                + "/services/" + paymentService.getId() + "/incidents")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(2))
+                                .andExpect(jsonPath("$[*].serviceId")
+                                                .value(org.hamcrest.Matchers.everyItem(
+                                                                org.hamcrest.Matchers.is(
+                                                                                paymentService.getId().intValue()))));
+        }
+
+        @Test
+        void userCannotViewIncidentsForAnotherUsersService() throws Exception {
+                User owner = new User();
+                owner.setEmail("service-owner@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application ownApplication = new Application();
+                ownApplication.setName("Own Application");
+                ownApplication.setUser(owner);
+                ownApplication = applicationRepository.saveAndFlush(ownApplication);
+
+                User anotherOwner = new User();
+                anotherOwner.setEmail("other-service-owner@example.com");
+                anotherOwner.setPasswordHash("password");
+                anotherOwner = userRepository.saveAndFlush(anotherOwner);
+
+                Application anotherApplication = new Application();
+                anotherApplication.setName("Another Application");
+                anotherApplication.setUser(anotherOwner);
+                anotherApplication = applicationRepository.saveAndFlush(anotherApplication);
+
+                Service privateService = new Service();
+                privateService.setName("Private API");
+                privateService.setType("API");
+                privateService.setApplication(anotherApplication);
+                privateService = serviceRepository.saveAndFlush(privateService);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + ownApplication.getId()
+                                + "/services/" + privateService.getId() + "/incidents")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isNotFound());
         }
 
 }

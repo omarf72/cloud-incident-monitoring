@@ -5,6 +5,7 @@ import com.omar.incident_monitoring.entity.Application;
 import com.omar.incident_monitoring.entity.Service;
 import com.omar.incident_monitoring.exception.ApplicationNotFoundException;
 import com.omar.incident_monitoring.repository.ApplicationRepository;
+import com.omar.incident_monitoring.repository.IncidentRepository;
 import com.omar.incident_monitoring.repository.ServiceRepository;
 
 import java.util.List;
@@ -13,120 +14,161 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.omar.incident_monitoring.dto.IncidentResponse;
 import com.omar.incident_monitoring.dto.MonitoredServiceResponse;
 import com.omar.incident_monitoring.exception.ServiceNotFoundException;
 
 @org.springframework.stereotype.Service
 public class MonitoredServiceManager {
 
-    private final ServiceRepository serviceRepository;
-    private final ApplicationRepository applicationRepository;
+        private final ServiceRepository serviceRepository;
+        private final ApplicationRepository applicationRepository;
+        private final IncidentRepository incidentRepository;
 
-    public MonitoredServiceManager(
-            ServiceRepository serviceRepository,
-            ApplicationRepository applicationRepository) {
-        this.serviceRepository = serviceRepository;
-        this.applicationRepository = applicationRepository;
-    }
-
-    @Transactional
-    public MonitoredServiceResponse createService(
-            Long applicationId, ServiceCreateRequest request) {
-
-        Long userId = getAuthenticatedUserId();
-
-        Application application = applicationRepository
-                .findByIdAndUserId(applicationId, userId)
-                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
-
-        Service service = new Service();
-        service.setName(request.getName().trim());
-        service.setType(request.getType().trim().toUpperCase());
-        service.setApplication(application);
-
-        Service savedService = serviceRepository.save(service);
-
-        return convertToResponse(savedService);
-    }
-
-    public List<MonitoredServiceResponse> getServicesForApplication(
-            Long applicationId) {
-
-        Long userId = getAuthenticatedUserId();
-
-        applicationRepository.findByIdAndUserId(applicationId, userId)
-                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
-
-        return serviceRepository.findAllByApplicationId(applicationId)
-                .stream()
-                .map(this::convertToResponse)
-                .toList();
-    }
-
-    private Long getAuthenticatedUserId() {
-        Object principal = SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getPrincipal();
-
-        if (principal instanceof Long userId) {
-            return userId;
+        public MonitoredServiceManager(
+                        ServiceRepository serviceRepository,
+                        ApplicationRepository applicationRepository,
+                        IncidentRepository incidentRepository) {
+                this.serviceRepository = serviceRepository;
+                this.applicationRepository = applicationRepository;
+                this.incidentRepository = incidentRepository;
         }
 
-        throw new AccessDeniedException("Authenticated user ID is unavailable");
-    }
+        @Transactional
+        public MonitoredServiceResponse createService(
+                        Long applicationId, ServiceCreateRequest request) {
 
-    private MonitoredServiceResponse convertToResponse(Service service) {
-        MonitoredServiceResponse response = new MonitoredServiceResponse();
+                Long userId = getAuthenticatedUserId();
 
-        response.setId(service.getId());
-        response.setName(service.getName());
-        response.setType(service.getType());
-        response.setCreatedAt(service.getCreatedAt());
+                Application application = applicationRepository
+                                .findByIdAndUserId(applicationId, userId)
+                                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
-        return response;
-    }
+                Service service = new Service();
+                service.setName(request.getName().trim());
+                service.setType(request.getType().trim().toUpperCase());
+                service.setApplication(application);
 
-    @Transactional
-    public MonitoredServiceResponse updateService(
-            Long applicationId,
-            Long serviceId,
-            ServiceCreateRequest request) {
+                Service savedService = serviceRepository.save(service);
 
-        Long userId = getAuthenticatedUserId();
+                return convertToResponse(savedService);
+        }
 
-        // Verify the authenticated user owns the application.
-        applicationRepository.findByIdAndUserId(applicationId, userId)
-                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+        public List<MonitoredServiceResponse> getServicesForApplication(
+                        Long applicationId) {
 
-        // Verify the service belongs to this application.
-        Service service = serviceRepository
-                .findByIdAndApplicationId(serviceId, applicationId)
-                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
+                Long userId = getAuthenticatedUserId();
 
-        // Apply the requested changes.
-        service.setName(request.getName().trim());
-        service.setType(request.getType().trim().toUpperCase());
+                applicationRepository.findByIdAndUserId(applicationId, userId)
+                                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
-        Service updatedService = serviceRepository.save(service);
+                return serviceRepository.findAllByApplicationId(applicationId)
+                                .stream()
+                                .map(this::convertToResponse)
+                                .toList();
+        }
 
-        return convertToResponse(updatedService);
-    }
+        private Long getAuthenticatedUserId() {
+                Object principal = SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getPrincipal();
 
-    @Transactional 
-    public void deleteService(Long applicationId,Long serviceId){
+                if (principal instanceof Long userId) {
+                        return userId;
+                }
 
-        Long userId = getAuthenticatedUserId();
+                throw new AccessDeniedException("Authenticated user ID is unavailable");
+        }
 
-         // Verify the authenticated user owns the application.
-        applicationRepository.findByIdAndUserId(applicationId, userId)
-                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+        private MonitoredServiceResponse convertToResponse(Service service) {
+                MonitoredServiceResponse response = new MonitoredServiceResponse();
 
-        // Verify the service belongs to this application.
-        Service service = serviceRepository
-                .findByIdAndApplicationId(serviceId, applicationId)
-                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
-        
-        serviceRepository.delete(service);
-    }
+                response.setId(service.getId());
+                response.setName(service.getName());
+                response.setType(service.getType());
+                response.setCreatedAt(service.getCreatedAt());
+
+                return response;
+        }
+
+        @Transactional
+        public MonitoredServiceResponse updateService(
+                        Long applicationId,
+                        Long serviceId,
+                        ServiceCreateRequest request) {
+
+                Long userId = getAuthenticatedUserId();
+
+                // Verify the authenticated user owns the application.
+                applicationRepository.findByIdAndUserId(applicationId, userId)
+                                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+                // Verify the service belongs to this application.
+                Service service = serviceRepository
+                                .findByIdAndApplicationId(serviceId, applicationId)
+                                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
+
+                // Apply the requested changes.
+                service.setName(request.getName().trim());
+                service.setType(request.getType().trim().toUpperCase());
+
+                Service updatedService = serviceRepository.save(service);
+
+                return convertToResponse(updatedService);
+        }
+
+        @Transactional
+        public void deleteService(Long applicationId, Long serviceId) {
+
+                Long userId = getAuthenticatedUserId();
+
+                // Verify the authenticated user owns the application.
+                applicationRepository.findByIdAndUserId(applicationId, userId)
+                                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+                // Verify the service belongs to this application.
+                Service service = serviceRepository
+                                .findByIdAndApplicationId(serviceId, applicationId)
+                                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
+
+                serviceRepository.delete(service);
+        }
+
+        public List<IncidentResponse> getIncidentsForService(
+                        Long applicationId,
+                        Long serviceId) {
+
+                Long userId = getAuthenticatedUserId();
+
+                // Verify the authenticated user owns the application.
+                applicationRepository.findByIdAndUserId(applicationId, userId)
+                                .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
+
+                // Verify the service belongs to this application.
+                serviceRepository.findByIdAndApplicationId(serviceId, applicationId)
+                                .orElseThrow(() -> new ServiceNotFoundException(serviceId));
+
+                // Retrieve incidents associated with this service.
+                return incidentRepository.findAllByServiceId(serviceId)
+                                .stream()
+                                .map(incident -> {
+                                        IncidentResponse response = new IncidentResponse();
+                                        response.setId(incident.getId());
+                                        response.setName(incident.getName());
+                                        response.setSeverity(incident.getSeverity());
+                                        response.setStatus(incident.getStatus());
+                                        response.setReason(incident.getReason());
+                                        response.setApplicationId(incident.getApplication().getId());
+                                        response.setServiceId(
+                                                        incident.getService() == null ? null
+                                                                        : incident.getService().getId());
+                                        response.setStartedAt(incident.getStartedAt());
+                                        response.setEndedAt(incident.getEndedAt());
+                                        response.setCreatedAt(incident.getCreatedAt());
+                                        return response;
+                                })
+                                .toList();
+        }
 
 }
