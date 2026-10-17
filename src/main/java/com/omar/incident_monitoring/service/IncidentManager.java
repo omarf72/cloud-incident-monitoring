@@ -92,18 +92,23 @@ public class IncidentManager {
         return convertToResponse(savedIncident);
     }
 
-    public List<IncidentResponse> getIncidents(Long applicationId) {
+    public List<IncidentResponse> getIncidents(
+            Long applicationId,
+            Incident.IncidentStatus status,
+            Incident.IncidentSeverity severity) {
+
         Long userId = getAuthenticatedUserId();
 
         Application ownApplication = applicationRepository
                 .findByIdAndUserId(applicationId, userId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
-        return incidentRepository.findAllByApplicationId(ownApplication.getId())
+        return incidentRepository
+                .findByApplicationIdAndOptionalFilters(
+                        ownApplication.getId(), status, severity)
                 .stream()
                 .map(this::convertToResponse)
                 .toList();
-
     }
 
     public IncidentResponse updateIncident(

@@ -1085,6 +1085,7 @@ class ApplicationControllerIntegrationTest {
 
         @Test
         void userCannotViewIncidentsForAnotherUsersService() throws Exception {
+
                 User owner = new User();
                 owner.setEmail("service-owner@example.com");
                 owner.setPasswordHash("password");
@@ -1117,6 +1118,82 @@ class ApplicationControllerIntegrationTest {
                                 + "/services/" + privateService.getId() + "/incidents")
                                 .header("Authorization", "Bearer " + token))
                                 .andExpect(status().isNotFound());
+        }
+
+        @Test
+        void userCanFilterIncidentsByStatusAndSeverity() throws Exception {
+                User owner = new User();
+                owner.setEmail("filter-status-severity@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Filtering Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident openHigh = new Incident();
+                openHigh.setName("Open high incident");
+                openHigh.setSeverity(Incident.IncidentSeverity.HIGH);
+                openHigh.setStatus(Incident.IncidentStatus.OPEN);
+                openHigh.setApplication(application);
+                incidentRepository.saveAndFlush(openHigh);
+
+                Incident openLow = new Incident();
+                openLow.setName("Open low incident");
+                openLow.setSeverity(Incident.IncidentSeverity.LOW);
+                openLow.setStatus(Incident.IncidentStatus.OPEN);
+                openLow.setApplication(application);
+                incidentRepository.saveAndFlush(openLow);
+
+                Incident resolvedHigh = new Incident();
+                resolvedHigh.setName("Resolved high incident");
+                resolvedHigh.setSeverity(Incident.IncidentSeverity.HIGH);
+                resolvedHigh.setStatus(Incident.IncidentStatus.RESOLVED);
+                resolvedHigh.setApplication(application);
+                incidentRepository.saveAndFlush(resolvedHigh);
+
+                String token = jwtService.generateToken(owner);
+                String url = "/api/applications/" + application.getId() + "/incidents";
+
+                // Filter by status.
+                mockMvc.perform(get(url + "?status=OPEN")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(2));
+
+                // Filter by severity.
+                mockMvc.perform(get(url + "?severity=HIGH")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(2));
+
+                // Apply both filters together.
+                mockMvc.perform(get(url + "?status=OPEN&severity=HIGH")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.length()").value(1))
+                                .andExpect(jsonPath("$[0].name").value("Open high incident"));
+        }
+
+        @Test
+        void userCannotFilterIncidentsWithInvalidStatus() throws Exception {
+                User owner = new User();
+                owner.setEmail("invalid-filter@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Invalid Filter Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId()
+                                + "/incidents?status=INVALID")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isBadRequest());
         }
 
 }

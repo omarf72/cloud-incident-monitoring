@@ -9,12 +9,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.omar.incident_monitoring.dto.IncidentCreateRequest;
 import com.omar.incident_monitoring.dto.IncidentResponse;
 import com.omar.incident_monitoring.dto.IncidentUpdateRequest;
+import com.omar.incident_monitoring.entity.Incident;
 import com.omar.incident_monitoring.service.IncidentManager;
 
 import jakarta.validation.Valid;
@@ -39,8 +41,11 @@ public class IncidentController {
 
     @GetMapping
     public List<IncidentResponse> getIncidents(
-            @PathVariable Long applicationId) {
-        return incidentManager.getIncidents(applicationId);
+            @PathVariable Long applicationId,
+            @RequestParam(required = false) Incident.IncidentStatus status,
+            @RequestParam(required = false) Incident.IncidentSeverity severity) {
+
+        return incidentManager.getIncidents(applicationId, status, severity);
     }
 
     @PatchMapping("/{incidentId}")
@@ -51,7 +56,5 @@ public class IncidentController {
         return incidentManager.updateIncident(
                 incidentId, applicationId, request);
     }
-
-    
 
 }
