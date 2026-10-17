@@ -13,10 +13,12 @@ import com.omar.incident_monitoring.entity.Application;
 import com.omar.incident_monitoring.entity.Incident;
 import com.omar.incident_monitoring.repository.ApplicationRepository;
 import com.omar.incident_monitoring.repository.IncidentRepository;
+import com.omar.incident_monitoring.repository.ServiceRepository;
 import com.omar.incident_monitoring.entity.Incident.IncidentStatus;
 import com.omar.incident_monitoring.exception.ApplicationNotFoundException;
 import com.omar.incident_monitoring.exception.IncidentNotFound;
 import com.omar.incident_monitoring.exception.InvalidIncidentUpdateException;
+import com.omar.incident_monitoring.exception.ServiceNotFoundException;
 
 @Service
 public class IncidentManager {
@@ -25,9 +27,15 @@ public class IncidentManager {
 
     private final IncidentRepository incidentRepository;
 
-    public IncidentManager(ApplicationRepository applicationRepository, IncidentRepository incidentRepository) {
+    private final ServiceRepository serviceRepository;
+
+    public IncidentManager(
+            ApplicationRepository applicationRepository,
+            IncidentRepository incidentRepository,
+            ServiceRepository serviceRepository) {
         this.applicationRepository = applicationRepository;
         this.incidentRepository = incidentRepository;
+        this.serviceRepository = serviceRepository;
     }
 
     private Long getAuthenticatedUserId() {
@@ -54,6 +62,18 @@ public class IncidentManager {
                 .findByIdAndUserId(applicationId, userId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
+        com.omar.incident_monitoring.entity.Service service = null;
+
+        if (request.getServiceId() != null) {
+            service = serviceRepository
+                    .findByIdAndApplicationId(
+                            request.getServiceId(),
+                            applicationId)
+                    .orElseThrow(
+                            () -> new ServiceNotFoundException(
+                                    request.getServiceId()));
+        }
+
         Incident incident = new Incident();
 
         incident.setName(request.getName());
@@ -61,6 +81,7 @@ public class IncidentManager {
         incident.setStatus(IncidentStatus.OPEN);
         incident.setReason(request.getReason());
         incident.setApplication(ownApplication);
+        incident.setService(service);
 
         LocalDateTime now = LocalDateTime.now();
         incident.setCreatedAt(now);

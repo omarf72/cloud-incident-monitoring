@@ -8,17 +8,27 @@ import jakarta.validation.constraints.Size;
 public class IncidentCreateRequest {
 
     @NotBlank(message = "Name is required")
-    @Size(max = 100,message = "Name must be 100 character or under")
+    @Size(max = 100, message = "Name must be 100 character or under")
     private String name;
 
-    @NotNull 
+    @NotNull
     private Incident.IncidentSeverity severity;
-    
-    @NotNull 
+
+    @NotNull
     private Incident.IncidentStatus status;
 
-    @Size(max=1000,message = "Reason must be 1000 or under")
+    @Size(max = 1000, message = "Reason must be 1000 or under")
     private String reason;
+
+    private Long serviceId;
+
+    public Long getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(Long serviceId) {
+        this.serviceId = serviceId;
+    }
 
     public String getName() {
         return name;
@@ -51,7 +61,5 @@ public class IncidentCreateRequest {
     public void setReason(String reason) {
         this.reason = reason;
     }
-
-    
 
 }

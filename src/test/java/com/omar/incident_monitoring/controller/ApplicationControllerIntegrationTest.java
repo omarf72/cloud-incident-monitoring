@@ -548,9 +548,10 @@ class ApplicationControllerIntegrationTest {
                                                     "name": "Elevated API latency",
                                                     "severity": "HIGH",
                                                     "status": "OPEN",
-                                                    "reason": "Response times exceeded the configured threshold"
+                                                    "reason": "Response times exceeded the configured threshold",
+                                                    "serviceId": %d
                                                 }
-                                                """))
+                                                """.formatted(service.getId())))
                                 .andExpect(status().isCreated())
                                 .andExpect(jsonPath("$.name").value("Elevated API latency"))
                                 .andExpect(jsonPath("$.severity").value("HIGH"))
@@ -558,7 +559,7 @@ class ApplicationControllerIntegrationTest {
                                 .andExpect(jsonPath("$.reason").value(
                                                 "Response times exceeded the configured threshold"))
                                 .andExpect(jsonPath("$.applicationId").value(application.getId()))
-                                .andExpect(jsonPath("$.serviceId").doesNotExist())
+                                .andExpect(jsonPath("$.serviceId").value(service.getId()))
                                 .andExpect(jsonPath("$.startedAt").isNotEmpty())
                                 .andExpect(jsonPath("$.createdAt").isNotEmpty())
                                 .andExpect(jsonPath("$.endedAt").doesNotExist());
@@ -971,6 +972,54 @@ class ApplicationControllerIntegrationTest {
                 assertEquals(Incident.IncidentStatus.OPEN, unchangedIncident.getStatus());
                 assertEquals("Original reason", unchangedIncident.getReason());
                 org.junit.jupiter.api.Assertions.assertNull(unchangedIncident.getEndedAt());
+        }
+
+        @Test
+        void userCannotAssociateIncidentWithServiceFromAnotherApplication() throws Exception {
+                User owner = new User();
+                owner.setEmail("incident-owner@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application ownApplication = new Application();
+                ownApplication.setName("Own Application");
+                ownApplication.setUser(owner);
+                ownApplication = applicationRepository.saveAndFlush(ownApplication);
+
+                User anotherOwner = new User();
+                anotherOwner.setEmail("another-owner@example.com");
+                anotherOwner.setPasswordHash("password");
+                anotherOwner = userRepository.saveAndFlush(anotherOwner);
+
+                Application anotherApplication = new Application();
+                anotherApplication.setName("Another Application");
+                anotherApplication.setUser(anotherOwner);
+                anotherApplication = applicationRepository.saveAndFlush(anotherApplication);
+
+                Service anotherService = new Service();
+                anotherService.setName("Private API");
+                anotherService.setType("API");
+                anotherService.setApplication(anotherApplication);
+                anotherService = serviceRepository.saveAndFlush(anotherService);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(post("/api/applications/" + ownApplication.getId() + "/incidents")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                                {
+                                                    "name": "Unauthorized incident",
+                                                    "severity": "HIGH",
+                                                    "status": "OPEN",
+                                                    "reason": "Testing service ownership",
+                                                    "serviceId": %d
+                                                }
+                                                """.formatted(anotherService.getId())))
+                                .andExpect(status().isNotFound());
+
+                assertTrue(
+        incidentRepository.findAllByApplicationId(ownApplication.getId()).isEmpty());
         }
 
 }
