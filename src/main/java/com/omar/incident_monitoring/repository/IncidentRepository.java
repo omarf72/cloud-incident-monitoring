@@ -10,6 +10,8 @@ import com.omar.incident_monitoring.entity.Incident.IncidentSeverity;
 import com.omar.incident_monitoring.entity.Incident.IncidentStatus;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 public interface IncidentRepository extends JpaRepository<Incident, Long> {
 
@@ -25,9 +27,9 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
               AND (:status IS NULL OR i.status = :status)
               AND (:severity IS NULL OR i.severity = :severity)
             """)
-    List<Incident> findByApplicationIdAndOptionalFilters(
+    Page<Incident> findByApplicationIdAndOptionalFilters(
             @Param("applicationId") Long applicationId,
             @Param("status") IncidentStatus status,
-            @Param("severity") IncidentSeverity severity);
+            @Param("severity") IncidentSeverity severity,Pageable pageable);
 
 }

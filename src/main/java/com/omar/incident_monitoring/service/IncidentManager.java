@@ -19,6 +19,11 @@ import com.omar.incident_monitoring.exception.ApplicationNotFoundException;
 import com.omar.incident_monitoring.exception.IncidentNotFound;
 import com.omar.incident_monitoring.exception.InvalidIncidentUpdateException;
 import com.omar.incident_monitoring.exception.ServiceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import com.omar.incident_monitoring.dto.IncidentPageResponse;
 
 @Service
 public class IncidentManager {
@@ -92,10 +97,11 @@ public class IncidentManager {
         return convertToResponse(savedIncident);
     }
 
-    public List<IncidentResponse> getIncidents(
+    public IncidentPageResponse getIncidents(
             Long applicationId,
             Incident.IncidentStatus status,
-            Incident.IncidentSeverity severity) {
+            Incident.IncidentSeverity severity, int page,
+            int size) {
 
         Long userId = getAuthenticatedUserId();
 
@@ -103,12 +109,27 @@ public class IncidentManager {
                 .findByIdAndUserId(applicationId, userId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
-        return incidentRepository
-                .findByApplicationIdAndOptionalFilters(
-                        ownApplication.getId(), status, severity)
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        Page<Incident> incidentPage = incidentRepository.findByApplicationIdAndOptionalFilters(
+                ownApplication.getId(), status, severity, pageable);
+
+        List<IncidentResponse> incidents = incidentPage.getContent()
                 .stream()
                 .map(this::convertToResponse)
                 .toList();
+
+        return new IncidentPageResponse(
+                incidents,
+                incidentPage.getNumber(),
+                incidentPage.getSize(),
+                incidentPage.getTotalElements(),
+                incidentPage.getTotalPages(),
+                incidentPage.isFirst(),
+                incidentPage.isLast());
     }
 
     public IncidentResponse updateIncident(

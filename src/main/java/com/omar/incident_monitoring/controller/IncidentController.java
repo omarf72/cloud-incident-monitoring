@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.omar.incident_monitoring.dto.IncidentCreateRequest;
+import com.omar.incident_monitoring.dto.IncidentPageResponse;
 import com.omar.incident_monitoring.dto.IncidentResponse;
 import com.omar.incident_monitoring.dto.IncidentUpdateRequest;
 import com.omar.incident_monitoring.entity.Incident;
@@ -40,12 +42,21 @@ public class IncidentController {
     }
 
     @GetMapping
-    public List<IncidentResponse> getIncidents(
+    public IncidentPageResponse getIncidents(
             @PathVariable Long applicationId,
             @RequestParam(required = false) Incident.IncidentStatus status,
-            @RequestParam(required = false) Incident.IncidentSeverity severity) {
+            @RequestParam(required = false) Incident.IncidentSeverity severity,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-        return incidentManager.getIncidents(applicationId, status, severity);
+        if (page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Page must be 0 or greater and size must be between 1 and 100");
+        }
+
+        return incidentManager.getIncidents(
+                applicationId, status, severity, page, size);
     }
 
     @PatchMapping("/{incidentId}")
