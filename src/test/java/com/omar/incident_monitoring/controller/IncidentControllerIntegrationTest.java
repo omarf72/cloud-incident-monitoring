@@ -756,4 +756,90 @@ class IncidentControllerIntegrationTest {
                                 .header("Authorization", "Bearer " + token))
                                 .andExpect(status().isBadRequest());
         }
+
+        @Test
+        void userCanSortIncidentsByCreatedAtAscending() throws Exception {
+                User owner = new User();
+                owner.setEmail("sortincidents@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Sort Incidents Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                LocalDateTime now = LocalDateTime.now();
+
+                Incident olderIncident = new Incident();
+                olderIncident.setName("Older incident");
+                olderIncident.setSeverity(Incident.IncidentSeverity.LOW);
+                olderIncident.setStatus(Incident.IncidentStatus.OPEN);
+                olderIncident.setReason("First incident");
+                olderIncident.setApplication(application);
+                olderIncident.setCreatedAt(now.minusHours(2));
+                olderIncident.setStartedAt(now.minusHours(2));
+                olderIncident = incidentRepository.saveAndFlush(olderIncident);
+
+                Incident newerIncident = new Incident();
+                newerIncident.setName("Newer incident");
+                newerIncident.setSeverity(Incident.IncidentSeverity.HIGH);
+                newerIncident.setStatus(Incident.IncidentStatus.OPEN);
+                newerIncident.setReason("Second incident");
+                newerIncident.setApplication(application);
+                newerIncident.setCreatedAt(now);
+                newerIncident.setStartedAt(now);
+                newerIncident = incidentRepository.saveAndFlush(newerIncident);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId() + "/incidents")
+                                .param("sort", "createdAt,asc")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.content.length()").value(2))
+                                .andExpect(jsonPath("$.content[0].id").value(olderIncident.getId()))
+                                .andExpect(jsonPath("$.content[1].id").value(newerIncident.getId()));
+        }
+
+        @Test
+        void userCannotSortIncidentsByInvalidField() throws Exception {
+                User owner = new User();
+                owner.setEmail("invalidsortfield@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Invalid Sort Field Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId() + "/incidents")
+                                .param("sort", "password,asc")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        void userCannotSortWithInvalidDirection() throws Exception {
+                User owner = new User();
+                owner.setEmail("invalidsortdirection@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Invalid Sort Direction Test Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                String token = jwtService.generateToken(owner);
+
+                mockMvc.perform(get("/api/applications/" + application.getId() + "/incidents")
+                                .param("sort", "createdAt,sideways")
+                                .header("Authorization", "Bearer " + token))
+                                .andExpect(status().isBadRequest());
+        }
+
 }

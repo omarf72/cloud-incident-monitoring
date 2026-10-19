@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.omar.incident_monitoring.dto.IncidentCreateRequest;
 import com.omar.incident_monitoring.dto.IncidentResponse;
@@ -23,6 +24,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
+
 import com.omar.incident_monitoring.dto.IncidentPageResponse;
 
 @Service
@@ -101,7 +104,7 @@ public class IncidentManager {
             Long applicationId,
             Incident.IncidentStatus status,
             Incident.IncidentSeverity severity, int page,
-            int size) {
+            int size,String sort) {
 
         Long userId = getAuthenticatedUserId();
 
@@ -109,10 +112,44 @@ public class IncidentManager {
                 .findByIdAndUserId(applicationId, userId)
                 .orElseThrow(() -> new ApplicationNotFoundException(applicationId));
 
+        String[] sortParts = sort.split(",");
+
+        if (sortParts.length != 2) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Sort must use the format field,direction");
+        }
+
+        String sortField = sortParts[0].trim();
+        String sortDirection = sortParts[1].trim();
+
+        List<String> allowedSortFields = List.of(
+                "createdAt",
+                "startedAt",
+                "severity",
+                "status",
+                "name");
+
+        if (!allowedSortFields.contains(sortField)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid sort field: " + sortField);
+        }
+
+        Sort.Direction direction;
+
+        try {
+            direction = Sort.Direction.fromString(sortDirection);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Sort direction must be asc or desc");
+        }
+
         Pageable pageable = PageRequest.of(
                 page,
                 size,
-                Sort.by(Sort.Direction.DESC, "createdAt"));
+                Sort.by(direction, sortField));
 
         Page<Incident> incidentPage = incidentRepository.findByApplicationIdAndOptionalFilters(
                 ownApplication.getId(), status, severity, pageable);

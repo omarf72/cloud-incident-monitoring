@@ -47,7 +47,8 @@ public class IncidentController {
             @RequestParam(required = false) Incident.IncidentStatus status,
             @RequestParam(required = false) Incident.IncidentSeverity severity,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
         if (page < 0 || size < 1 || size > 100) {
             throw new ResponseStatusException(
@@ -56,7 +57,7 @@ public class IncidentController {
         }
 
         return incidentManager.getIncidents(
-                applicationId, status, severity, page, size);
+                applicationId, status, severity, page, size,sort);
     }
 
     @PatchMapping("/{incidentId}")
