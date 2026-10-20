@@ -1,7 +1,9 @@
 package com.omar.incident_monitoring.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -46,6 +48,8 @@ public class IncidentController {
             @PathVariable Long applicationId,
             @RequestParam(required = false) Incident.IncidentStatus status,
             @RequestParam(required = false) Incident.IncidentSeverity severity,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startedAfter,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startedBefore,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
@@ -57,7 +61,7 @@ public class IncidentController {
         }
 
         return incidentManager.getIncidents(
-                applicationId, status, severity, page, size,sort);
+                applicationId, status, severity,startedAfter,startedBefore, page, size, sort);
     }
 
     @PatchMapping("/{incidentId}")

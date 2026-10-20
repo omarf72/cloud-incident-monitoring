@@ -842,4 +842,73 @@ class IncidentControllerIntegrationTest {
                                 .andExpect(status().isBadRequest());
         }
 
+        @Test
+        void userCanFilterIncidentsByStartedDateRange() throws Exception {
+                User owner = new User();
+                owner.setEmail("filter-date-range@example.com");
+                owner.setPasswordHash("password");
+                owner = userRepository.saveAndFlush(owner);
+
+                Application application = new Application();
+                application.setName("Date Filtering Application");
+                application.setUser(owner);
+                application = applicationRepository.saveAndFlush(application);
+
+                Incident beforeRange = new Incident();
+                beforeRange.setName("Before range");
+                beforeRange.setSeverity(Incident.IncidentSeverity.HIGH);
+                beforeRange.setStatus(Incident.IncidentStatus.OPEN);
+                beforeRange.setStartedAt(
+                                java.time.LocalDateTime.of(2026, 10, 18, 11, 59, 59));
+                beforeRange.setApplication(application);
+                incidentRepository.saveAndFlush(beforeRange);
+
+                Incident atStartBoundary = new Incident();
+                atStartBoundary.setName("At start boundary");
+                atStartBoundary.setSeverity(Incident.IncidentSeverity.HIGH);
+                atStartBoundary.setStatus(Incident.IncidentStatus.OPEN);
+                atStartBoundary.setStartedAt(
+                                java.time.LocalDateTime.of(2026, 10, 18, 12, 0, 0));
+                atStartBoundary.setApplication(application);
+                incidentRepository.saveAndFlush(atStartBoundary);
+
+                Incident insideRange = new Incident();
+                insideRange.setName("Inside range");
+                insideRange.setSeverity(Incident.IncidentSeverity.LOW);
+                insideRange.setStatus(Incident.IncidentStatus.OPEN);
+                insideRange.setStartedAt(
+                                java.time.LocalDateTime.of(2026, 10, 19, 12, 0, 0));
+                insideRange.setApplication(application);
+                incidentRepository.saveAndFlush(insideRange);
+
+                Incident atEndBoundary = new Incident();
+                atEndBoundary.setName("At end boundary");
+                atEndBoundary.setSeverity(Incident.IncidentSeverity.HIGH);
+                atEndBoundary.setStatus(Incident.IncidentStatus.RESOLVED);
+                atEndBoundary.setStartedAt(
+                                java.time.LocalDateTime.of(2026, 10, 20, 12, 0, 0));
+                atEndBoundary.setApplication(application);
+                incidentRepository.saveAndFlush(atEndBoundary);
+
+                Incident afterRange = new Incident();
+                afterRange.setName("After range");
+                afterRange.setSeverity(Incident.IncidentSeverity.LOW);
+                afterRange.setStatus(Incident.IncidentStatus.OPEN);
+                afterRange.setStartedAt(
+                                java.time.LocalDateTime.of(2026, 10, 20, 12, 0, 1));
+                afterRange.setApplication(application);
+                incidentRepository.saveAndFlush(afterRange);
+
+                String token = jwtService.generateToken(owner);
+                String url = "/api/applications/" + application.getId()
+                                + "/incidents"
+                                + "?startedAfter=2026-10-18T12:00:00"
+                                + "&startedBefore=2026-10-20T12:00:00";
+
+                mockMvc.perform(get(url)
+                                .header("Authorization", "Bearer " + token))
+                                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
+                                .andExpect(status().isOk());
+        }
+
 }

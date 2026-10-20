@@ -1,5 +1,6 @@
 package com.omar.incident_monitoring.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,12 +25,20 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     @Query("""
             SELECT i FROM Incident i
             WHERE i.application.id = :applicationId
-              AND (:status IS NULL OR i.status = :status)
-              AND (:severity IS NULL OR i.severity = :severity)
-            """)
+             AND (:status IS NULL OR i.status = :status)
+             AND (:severity IS NULL OR i.severity = :severity)
+             AND (CAST(:startedAfter AS timestamp) IS NULL
+                 OR i.startedAt >= :startedAfter)
+             AND (CAST(:startedBefore AS timestamp) IS NULL
+                 OR i.startedAt <= :startedBefore)
+                    """)
+                    
     Page<Incident> findByApplicationIdAndOptionalFilters(
             @Param("applicationId") Long applicationId,
             @Param("status") IncidentStatus status,
-            @Param("severity") IncidentSeverity severity,Pageable pageable);
+            @Param("severity") IncidentSeverity severity,
+            @Param("startedAfter") LocalDateTime startedAfter,
+            @Param("startedBefore") LocalDateTime startedBefore,
+            Pageable pageable);
 
 }

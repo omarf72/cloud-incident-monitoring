@@ -103,10 +103,20 @@ public class IncidentManager {
     public IncidentPageResponse getIncidents(
             Long applicationId,
             Incident.IncidentStatus status,
-            Incident.IncidentSeverity severity, int page,
-            int size,String sort) {
+            Incident.IncidentSeverity severity, LocalDateTime startedAfter,
+            LocalDateTime startedBefore, int page,
+            int size, String sort) {
 
         Long userId = getAuthenticatedUserId();
+
+
+        if (startedAfter != null
+                && startedBefore != null
+                && startedAfter.isAfter(startedBefore)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "startedAfter must be before or equal to startedBefore");
+        }
 
         Application ownApplication = applicationRepository
                 .findByIdAndUserId(applicationId, userId)
@@ -152,7 +162,12 @@ public class IncidentManager {
                 Sort.by(direction, sortField));
 
         Page<Incident> incidentPage = incidentRepository.findByApplicationIdAndOptionalFilters(
-                ownApplication.getId(), status, severity, pageable);
+                ownApplication.getId(),
+                status,
+                severity,
+                startedAfter,
+                startedBefore,
+                pageable);
 
         List<IncidentResponse> incidents = incidentPage.getContent()
                 .stream()
