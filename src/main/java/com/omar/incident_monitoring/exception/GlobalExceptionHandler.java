@@ -1,6 +1,7 @@
 package com.omar.incident_monitoring.exception;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -106,6 +107,15 @@ public class GlobalExceptionHandler {
                 return ResponseEntity
                                 .status(HttpStatus.BAD_REQUEST)
                                 .body(errorResponse);
+        }
+
+        @ExceptionHandler(IllegalArgumentException.class)
+        public ResponseEntity<Map<String, String>> handleIllegalArgument(
+                        IllegalArgumentException exception) {
+
+                return ResponseEntity
+                                .badRequest()
+                                .body(Map.of("error", exception.getMessage()));
         }
 
 }
