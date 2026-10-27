@@ -20,7 +20,7 @@ public class Incident {
     @JoinColumn(name = "service_id")
     private Service service;
 
-    @Column(nullable = false,length = 100)
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Enumerated(EnumType.STRING)
@@ -49,6 +49,18 @@ public class Incident {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "threshold_id")
+    private MetricThreshold threshold;
+
+    public MetricThreshold getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(MetricThreshold threshold) {
+        this.threshold = threshold;
+    }
 
     public Long getId() {
         return id;
@@ -129,7 +141,5 @@ public class Incident {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-
-    
 
 }

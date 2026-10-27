@@ -1,5 +1,6 @@
 package com.omar.incident_monitoring.repository;
 
+import com.omar.incident_monitoring.entity.Metric.MetricType;
 import com.omar.incident_monitoring.entity.MetricThreshold;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -9,4 +10,9 @@ public interface MetricThresholdRepository
         extends JpaRepository<MetricThreshold, Long> {
 
     List<MetricThreshold> findByService_Id(Long serviceId);
+
+    List<MetricThreshold> findByService_IdAndMetricTypeAndEnabledTrue(
+        Long serviceId,
+        MetricType metricType
+);
 }

@@ -1,6 +1,7 @@
 package com.omar.incident_monitoring.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +33,7 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
              AND (CAST(:startedBefore AS timestamp) IS NULL
                  OR i.startedAt <= :startedBefore)
                     """)
-                    
+
     Page<Incident> findByApplicationIdAndOptionalFilters(
             @Param("applicationId") Long applicationId,
             @Param("status") IncidentStatus status,
@@ -40,5 +41,9 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
             @Param("startedAfter") LocalDateTime startedAfter,
             @Param("startedBefore") LocalDateTime startedBefore,
             Pageable pageable);
+
+    Optional<Incident> findFirstByThreshold_IdAndStatusIn(
+            Long thresholdId,
+            Collection<IncidentStatus> statuses);
 
 }
