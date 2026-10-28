@@ -2,6 +2,7 @@ package com.omar.incident_monitoring.controller;
 
 import com.omar.incident_monitoring.dto.MetricThresholdCreateRequest;
 import com.omar.incident_monitoring.dto.MetricThresholdResponse;
+import com.omar.incident_monitoring.dto.MetricThresholdUpdateRequest;
 import com.omar.incident_monitoring.service.MetricThresholdManager;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -48,6 +49,23 @@ public class MetricThresholdController {
                 applicationId,
                 serviceId,
                 userId);
+    }
+
+    @PatchMapping("/{thresholdId}")
+    public MetricThresholdResponse updateThreshold(
+            @PathVariable Long applicationId,
+            @PathVariable Long serviceId,
+            @PathVariable Long thresholdId,
+            @Valid @RequestBody MetricThresholdUpdateRequest request) {
+
+        Long userId = getAuthenticatedUserId();
+
+        return metricThresholdManager.updateThreshold(
+                applicationId,
+                serviceId,
+                thresholdId,
+                userId,
+                request);
     }
 
     private Long getAuthenticatedUserId() {
