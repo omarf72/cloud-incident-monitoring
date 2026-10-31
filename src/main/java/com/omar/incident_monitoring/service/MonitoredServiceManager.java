@@ -8,6 +8,7 @@ import com.omar.incident_monitoring.repository.ApplicationRepository;
 import com.omar.incident_monitoring.repository.IncidentRepository;
 import com.omar.incident_monitoring.repository.ServiceRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -49,6 +50,7 @@ public class MonitoredServiceManager {
                 service.setName(request.getName().trim());
                 service.setType(request.getType().trim().toUpperCase());
                 service.setApplication(application);
+                service.setCreatedAt(LocalDateTime.now());
 
                 Service savedService = serviceRepository.save(service);
 

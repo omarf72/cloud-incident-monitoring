@@ -14,6 +14,7 @@ import com.omar.incident_monitoring.entity.User;
 import com.omar.incident_monitoring.repository.UserRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -108,6 +109,7 @@ public class ApplicationService {
     Application application = new Application();
     application.setName(request.getName().trim());
     application.setUser(user);
+    application.setCreatedAt(LocalDateTime.now());
 
     Application savedApplication =
             applicationRepository.save(application);
