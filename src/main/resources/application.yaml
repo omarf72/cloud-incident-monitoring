@@ -3,7 +3,8 @@ spring:
     import: optional:file:.env[.properties]
   application:
     name: incident-monitoring
-  
+
+
   datasource:
     url: jdbc:postgresql://localhost:5432/incident_monitoring
     username: omarfofana
@@ -13,6 +14,35 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: true
+
+  
+server:
+  port: 8081
+
+monitoring:
+  prometheus:
+    url: http://localhost:9090
+
+logging:
+  level:
+    io.micrometer: DEBUG
+    org.springframework.boot.actuate.autoconfigure.metrics: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+  otlp:
+    metrics:
+      export:
+        url: http://localhost:4318/v1/metrics
+        step: 30s
+
+  metrics:
+    tags:
+      application: ${spring.application.name}
 
 jwt:
   secret: ${JWT_SECRET}
