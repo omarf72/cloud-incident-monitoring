@@ -1,7 +1,10 @@
 spring:
   config:
     import: optional:file:.env[.properties]
-    
+  
+  application:
+    name: incident-monitoring  
+  
   datasource:
     url: jdbc:postgresql://localhost:5432/incident_monitoring_test
     username: omarfofana
