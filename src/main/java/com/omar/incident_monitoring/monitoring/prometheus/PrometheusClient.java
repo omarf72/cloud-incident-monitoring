@@ -25,41 +25,38 @@ public class PrometheusClient {
     }
 
     public Optional<Double> query(String promQl) {
-        try {
-            JsonNode response = restClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/api/v1/query")
-                            .queryParam("query", promQl)
-                            .build())
-                    .retrieve()
-                    .body(JsonNode.class);
+    try {
+        JsonNode response = restClient.get()
+                .uri("/api/v1/query?query={query}", promQl)
+                .retrieve()
+                .body(JsonNode.class);
 
-            if (response == null || !"success".equals(response.path("status").asText())) {
-                throw new PrometheusUnavailableException(
-                        "Prometheus returned an unsuccessful query response.");
-            }
-
-            JsonNode results = response.path("data").path("result");
-
-            if (!results.isArray()) {
-                throw new PrometheusUnavailableException(
-                        "Prometheus returned an invalid query result.");
-            }
-
-            if (results.isEmpty()) {
-                return Optional.empty();
-            }
-
-            String value = results.get(0)
-                    .path("value")
-                    .path(1)
-                    .asText();
-
-            return Optional.of(Double.parseDouble(value));
-
-        } catch (RestClientException | NumberFormatException exception) {
+        if (response == null || !"success".equals(response.path("status").asText())) {
             throw new PrometheusUnavailableException(
-                    "Unable to retrieve metrics from Prometheus.", exception);
+                    "Prometheus returned an unsuccessful query response.");
         }
+
+        JsonNode results = response.path("data").path("result");
+
+        if (!results.isArray()) {
+            throw new PrometheusUnavailableException(
+                    "Prometheus returned an invalid query result.");
+        }
+
+        if (results.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String value = results.get(0)
+                .path("value")
+                .path(1)
+                .asText();
+
+        return Optional.of(Double.parseDouble(value));
+
+    } catch (RestClientException | NumberFormatException exception) {
+        throw new PrometheusUnavailableException(
+                "Unable to retrieve metrics from Prometheus.", exception);
     }
+}
 }
