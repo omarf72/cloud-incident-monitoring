@@ -17,6 +17,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.omar.incident_monitoring.dto.MonitoringBaselineResponse;
 import com.omar.incident_monitoring.monitoring.prometheus.PrometheusClient;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+
+import com.omar.incident_monitoring.dto.MetricHistoryResponse;
+import com.omar.incident_monitoring.monitoring.prometheus.PrometheusSample;
 
 @ExtendWith(MockitoExtension.class)
 class MonitoringServiceTest {
@@ -81,5 +92,76 @@ class MonitoringServiceTest {
 
         assertFalse(response.metrics().get(2).available());
         assertFalse(response.metrics().get(4).available());
+    }
+
+    @Test
+    void getHistoryReturnsHistoricalSamples() {
+        Instant timestamp = Instant.parse("2026-11-08T16:00:00Z");
+
+        when(prometheusClient.queryRange(
+                any(),
+                any(Instant.class),
+                any(Instant.class),
+                any(Duration.class)))
+                .thenReturn(List.of(
+                        new PrometheusSample(timestamp, 25.5),
+                        new PrometheusSample(timestamp.plusSeconds(60), 30.2)));
+
+        MetricHistoryResponse response = monitoringService.getHistory(
+                "system_cpu",
+                "1h");
+
+        assertEquals("system_cpu", response.key());
+        assertEquals("System CPU Usage", response.name());
+        assertEquals("1h", response.range());
+        assertEquals("%", response.unit());
+
+        assertEquals(2, response.samples().size());
+        assertEquals(timestamp, response.samples().get(0).timestamp());
+        assertEquals(25.5, response.samples().get(0).value());
+        assertEquals(30.2, response.samples().get(1).value());
+
+        verify(prometheusClient).queryRange(
+                eq("avg(system_cpu_usage{application=\"incident-monitoring\"}) * 100"),
+                any(Instant.class),
+                any(Instant.class),
+                eq(Duration.ofMinutes(1)));
+    }
+
+    @Test
+    void getHistoryReturnsEmptySamplesWhenNoDataExists() {
+        when(prometheusClient.queryRange(
+                any(),
+                any(Instant.class),
+                any(Instant.class),
+                any(Duration.class)))
+                .thenReturn(List.of());
+
+        MetricHistoryResponse response = monitoringService.getHistory(
+                "jvm_memory",
+                "24h");
+
+        assertEquals("jvm_memory", response.key());
+        assertTrue(response.samples().isEmpty());
+
+        verify(prometheusClient).queryRange(
+                eq("sum(jvm_memory_used_bytes{application=\"incident-monitoring\"})"),
+                any(Instant.class),
+                any(Instant.class),
+                eq(Duration.ofMinutes(5)));
+    }
+
+    @Test
+    void getHistoryRejectsUnsupportedMetric() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> monitoringService.getHistory("unknown_metric", "1h"));
+    }
+
+    @Test
+    void getHistoryRejectsUnsupportedRange() {
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> monitoringService.getHistory("system_cpu", "30d"));
     }
 }

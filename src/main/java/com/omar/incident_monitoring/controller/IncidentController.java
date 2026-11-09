@@ -61,7 +61,7 @@ public class IncidentController {
         }
 
         return incidentManager.getIncidents(
-                applicationId, status, severity,startedAfter,startedBefore, page, size, sort);
+                applicationId, status, severity, startedAfter, startedBefore, page, size, sort);
     }
 
     @PatchMapping("/{incidentId}")

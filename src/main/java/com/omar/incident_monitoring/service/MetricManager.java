@@ -208,11 +208,11 @@ public class MetricManager {
                         }
 
                         boolean activeIncidentExists = incidentRepository
-                                .findFirstByThreshold_IdAndStatusIn(
-                                        threshold.getId(),
-                                        List.of(
-                                                IncidentStatus.OPEN,
-                                                IncidentStatus.ACKNOWLEDGED))
+                                        .findFirstByThreshold_IdAndStatusIn(
+                                                        threshold.getId(),
+                                                        List.of(
+                                                                        IncidentStatus.OPEN,
+                                                                        IncidentStatus.ACKNOWLEDGED))
                                         .isPresent();
 
                         if (activeIncidentExists) {
