@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.omar.incident_monitoring.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import com.omar.incident_monitoring.exception.InvalidCredentialsException;
+import com.omar.incident_monitoring.monitoring.prometheus.PrometheusUnavailableException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -116,6 +117,24 @@ public class GlobalExceptionHandler {
                 return ResponseEntity
                                 .badRequest()
                                 .body(Map.of("error", exception.getMessage()));
+        }
+
+        @ExceptionHandler(PrometheusUnavailableException.class)
+        public ResponseEntity<ErrorResponse> handlePrometheusUnavailable(
+                        PrometheusUnavailableException exception,
+                        HttpServletRequest request) {
+
+                ErrorResponse errorResponse = new ErrorResponse();
+
+                errorResponse.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                errorResponse.setError("Service Unavailable");
+                errorResponse.setMessage(exception.getMessage());
+                errorResponse.setTimestamp(LocalDateTime.now());
+                errorResponse.setPath(request.getRequestURI());
+
+                return ResponseEntity
+                                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                                .body(errorResponse);
         }
 
 }
