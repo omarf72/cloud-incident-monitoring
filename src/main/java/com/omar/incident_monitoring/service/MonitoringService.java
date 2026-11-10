@@ -32,11 +32,7 @@ public class MonitoringService {
 
                 String applicationFilter = "{application=\"" + applicationName + "\"}";
 
-                String errorRateQuery = "100 * (sum(rate(http_server_requests_milliseconds_count"
-                                + "{application=\"" + applicationName
-                                + "\",status=~\"5..\"}[5m])) or vector(0))"
-                                + " / clamp_min(sum(rate(http_server_requests_milliseconds_count"
-                                + applicationFilter + "[5m])), 1e-9)";
+                String errorRateQuery = getErrorRateQuery(applicationFilter);
 
                 List<MetricValue> metrics = List.of(
                                 collect(
@@ -126,11 +122,7 @@ public class MonitoringService {
 
                         case "error_rate" -> new MetricDefinition(
                                         "HTTP 5xx Error Rate",
-                                        "100 * (sum(rate(http_server_requests_milliseconds_count"
-                                                        + "{application=\"" + applicationName
-                                                        + "\",status=~\"5..\"}[5m])) or vector(0))"
-                                                        + " / clamp_min(sum(rate(http_server_requests_milliseconds_count"
-                                                        + applicationFilter + "[5m])), 1e-9)",
+                                        getErrorRateQuery(applicationFilter),
                                         "%");
 
                         case "jvm_memory" -> new MetricDefinition(
@@ -175,5 +167,15 @@ public class MonitoringService {
                         String name,
                         String query,
                         String unit) {
+        }
+
+        private String getErrorRateQuery(String applicationFilter) {
+                return "(100 * sum(rate(http_server_requests_milliseconds_count"
+                                + "{application=\"" + applicationName
+                                + "\",status=~\"5..\"}[5m]))"
+                                + " or (0 * sum(rate(http_server_requests_milliseconds_count"
+                                + applicationFilter + "[5m])))"
+                                + ") / clamp_min(sum(rate(http_server_requests_milliseconds_count"
+                                + applicationFilter + "[5m])), 1e-9)";
         }
 }
