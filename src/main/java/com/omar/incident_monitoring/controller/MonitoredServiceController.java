@@ -1,28 +1,33 @@
 package com.omar.incident_monitoring.controller;
 
-import com.omar.incident_monitoring.dto.IncidentResponse;
-import com.omar.incident_monitoring.dto.MonitoredServiceResponse;
-import com.omar.incident_monitoring.dto.ServiceCreateRequest;
-import com.omar.incident_monitoring.entity.Service;
-import com.omar.incident_monitoring.service.MonitoredServiceManager;
-
-import jakarta.validation.Valid;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
+
+import com.omar.incident_monitoring.dto.IncidentResponse;
+import com.omar.incident_monitoring.dto.MonitoredServiceResponse;
+import com.omar.incident_monitoring.dto.ServiceCreateRequest;
+import com.omar.incident_monitoring.dto.ServiceHealthResponse;
+import com.omar.incident_monitoring.service.MonitoredServiceManager;
+import com.omar.incident_monitoring.service.ServiceHealthManager;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/applications/{applicationId}/services")
 public class MonitoredServiceController {
 
     private final MonitoredServiceManager monitoredServiceManager;
+    private final ServiceHealthManager serviceHealthManager;
 
     public MonitoredServiceController(
-            MonitoredServiceManager monitoredServiceManager) {
+            MonitoredServiceManager monitoredServiceManager,
+            ServiceHealthManager serviceHealthManager) {
+
         this.monitoredServiceManager = monitoredServiceManager;
+        this.serviceHealthManager = serviceHealthManager;
     }
 
     @PostMapping
@@ -34,7 +39,8 @@ public class MonitoredServiceController {
     }
 
     @GetMapping
-    public List<MonitoredServiceResponse> getServices(@PathVariable Long applicationId) {
+    public List<MonitoredServiceResponse> getServices(
+            @PathVariable Long applicationId) {
         return monitoredServiceManager.getServicesForApplication(applicationId);
     }
 
@@ -43,12 +49,15 @@ public class MonitoredServiceController {
             @PathVariable Long applicationId,
             @PathVariable Long serviceId,
             @Valid @RequestBody ServiceCreateRequest request) {
-        return monitoredServiceManager.updateService(applicationId, serviceId, request);
+        return monitoredServiceManager.updateService(
+                applicationId, serviceId, request);
     }
 
     @DeleteMapping("/{serviceId}")
-    public ResponseEntity<Void> deleteSerivce(@PathVariable Long applicationId,
+    public ResponseEntity<Void> deleteService(
+            @PathVariable Long applicationId,
             @PathVariable Long serviceId) {
+
         monitoredServiceManager.deleteService(applicationId, serviceId);
         return ResponseEntity.noContent().build();
     }
@@ -57,7 +66,15 @@ public class MonitoredServiceController {
     public List<IncidentResponse> getServiceIncidents(
             @PathVariable Long applicationId,
             @PathVariable Long serviceId) {
-        return monitoredServiceManager.getIncidentsForService(applicationId, serviceId);
+        return monitoredServiceManager.getIncidentsForService(
+                applicationId, serviceId);
     }
 
+    @GetMapping("/{serviceId}/health")
+    public ServiceHealthResponse getServiceHealth(
+            @PathVariable Long applicationId,
+            @PathVariable Long serviceId) {
+        return serviceHealthManager.getServiceHealth(
+                applicationId, serviceId);
+    }
 }
