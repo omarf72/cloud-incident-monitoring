@@ -19,45 +19,47 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository,PasswordEncoder passwordEncoder,JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
         this.userRepository = userRepository;
-        this.passwordEncoder=passwordEncoder;
+        this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
     }
 
-    public AuthResponse register(RegisterRequest request){
-       if (userRepository.findByEmail(request.getEmail()).isPresent()){
+    public AuthResponse register(RegisterRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new EmailAlreadyExistsException(request.getEmail());
-       }
-       User user=new User();
-       user.setEmail(request.getEmail());
-       user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-       user.setCreatedAt(LocalDateTime.now());
+        }
 
-       User savedUser= userRepository.save(user);
+        User user = new User();
+        user.setEmail(request.getEmail());
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        user.setCreatedAt(LocalDateTime.now());
 
-       AuthResponse response=new AuthResponse();
+        User savedUser = userRepository.save(user);
 
-       response.setId(savedUser.getId());
-       response.setEmail(savedUser.getEmail());
-       response.setCreatedAt(savedUser.getCreatedAt());
+        String token = jwtService.generateToken(savedUser);
 
-       return response;
+        AuthResponse response = new AuthResponse();
+        response.setId(savedUser.getId());
+        response.setEmail(savedUser.getEmail());
+        response.setCreatedAt(savedUser.getCreatedAt());
+        response.setToken(token);
 
+        return response;
     }
 
-    public AuthResponse login(LoginRequest request){
+    public AuthResponse login(LoginRequest request) {
 
-        User user=userRepository.findByEmail(request.getEmail())
-        .orElseThrow(()-> new InvalidCredentialsException());
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new InvalidCredentialsException());
 
-        if(!passwordEncoder.matches(request.getPassword(),user.getPasswordHash())){
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new InvalidCredentialsException();
         }
-        
-        String token=jwtService.generateToken(user);
 
-        AuthResponse response=new AuthResponse();
+        String token = jwtService.generateToken(user);
+
+        AuthResponse response = new AuthResponse();
 
         response.setId(user.getId());
         response.setEmail(user.getEmail());
